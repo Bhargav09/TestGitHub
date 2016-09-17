@@ -1,0 +1,64 @@
+# Send an HTTP request to the server with XML request values
+ 
+import string
+import random
+from java.lang import String
+from java.net import URLEncoder
+ 
+from net.grinder.script import Test
+from net.grinder.plugin.http import HTTPRequest
+from net.grinder.common import GrinderException
+ 
+tests = {
+    "Sachin01"      : Test(1, "Sachin 1 posting"),
+    "Sport01"     : Test(2, "Sport 1 posting"),
+    "Sport02"     : Test(3, "Sport 2 posting"),
+    "Trading01"   : Test(4, "Trading 1 query"),
+    "LifeStyle01" : Test(5, "LifeStyle 1 posting"),
+}
+ 
+log = grinder.logger.info
+out = grinder.logger.TERMINAL
+ 
+# Server Properties
+ 
+SERVER     = "http://serverhost:7001"
+URI        = "/myServlet"
+ 
+class TestRunner:
+    def __call__(self):
+ 
+        for idx in range(len(tests)):
+ 
+           testId = random.choice(tests.keys())
+ 
+           log("Reading XML file %s " % testId)
+ 
+           file = open("./CAAssets/"+testId+".xml", 'r')
+           fileStr = URLEncoder.encode(String(file.read()))
+           file.close()
+ 
+           # Send the request to the server
+           requestString = "%s%s%s%s" % (SERVER, URI, "?xmldata=", fileStr)
+           requestString = string.join(requestString.split(), "")
+ 
+           grinder.statistics.delayReports = 1
+           request = HTTPRequest()
+           tests[testId].record(request)
+ 
+           log("Sending request %s " % requestString)
+           result = request.GET(requestString)
+ 
+           if string.find(result.getText(), "SUCCESS") < 1:
+              grinder.statistics.forLastTest.setSuccess(0)
+              writeToFile(result.getText(), testId)
+ 
+ 
+# Write the response
+def writeToFile(text, testId):
+    filename = "%s-%d-page-%d.html" % (grinder.processName,
+                                       testId,
+                                       grinder.runNumber)
+    file = open(filename, "w")
+    print >> file, text
+    file.close()
